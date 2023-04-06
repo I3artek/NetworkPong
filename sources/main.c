@@ -1,7 +1,7 @@
 #include "raylib.h"
 
-#define SCREEN_WIDTH (800)
-#define SCREEN_HEIGHT (450)
+#include "game.h"
+#include "nettools.h"
 
 #define WINDOW_TITLE "Window title"
 
@@ -10,24 +10,35 @@ int main(void)
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, WINDOW_TITLE);
     SetTargetFPS(60);
 
-    Texture2D texture = LoadTexture(ASSETS_PATH"test.png"); // Check README.md for how this works
+
+    struct game_info gi;
+
+    gi.upper_paddle_X = (SCREEN_WIDTH - PADDLE_WIDTH) / 2;
+    gi.lower_paddle_X = (SCREEN_WIDTH - PADDLE_WIDTH) / 2;
+    gi.ball_pos.x = SCREEN_WIDTH / 2 - BALL_RADIUS;
+    gi.ball_pos.y = SCREEN_HEIGHT / 2 - BALL_RADIUS;
+
+    struct socket_info si = {};
+    //create_client(&si);
 
     while (!WindowShouldClose())
     {
+        //Update
+
+        send_game_info(&si, &gi);
+        get_game_info(&si, &gi);
+
+        //Draw
         BeginDrawing();
 
-        ClearBackground(RAYWHITE);
+        ClearBackground(BLACK);
 
-        const int texture_x = SCREEN_WIDTH / 2 - texture.width / 2;
-        const int texture_y = SCREEN_HEIGHT / 2 - texture.height / 2;
-        DrawTexture(texture, texture_x, texture_y, WHITE);
-
-        const char* text = "OMG! IT WORKS!";
-        const Vector2 text_size = MeasureTextEx(GetFontDefault(), text, 20, 1);
-        DrawText(text, SCREEN_WIDTH / 2 - text_size.x / 2, texture_y + texture.height + text_size.y + 10, 20, BLACK);
+        draw_ball_and_paddles(&gi);
 
         EndDrawing();
     }
+
+    release(&si);
 
     CloseWindow();
 

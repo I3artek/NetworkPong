@@ -47,7 +47,7 @@ struct sockaddr_in make_address(const char *address, const char *port) {
 
 void    create_server(struct socket_info *si)
 {
-    set_address(si);
+    //set_address(si);
 
     si->server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (si->server_socket < 0)
@@ -73,7 +73,7 @@ void    create_server(struct socket_info *si)
 
 void    create_client(struct socket_info *si)
 {
-    set_address(si);
+    //set_address(si);
 
     si->client_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (si->client_socket < 0) {
@@ -124,26 +124,6 @@ void    release(struct socket_info *si)
         close(si->client_socket);
     if(si->server_socket != 0)
         close(si->server_socket);
-}
-
-void    get_game_info_from_server(struct socket_info *si, struct game_info *gi)
-{
-
-}
-
-void    send_game_info_to_server(struct socket_info *si, struct game_info *gi)
-{
-
-}
-
-void    get_game_info_from_client(struct socket_info *si, struct game_info *gi)
-{
-
-}
-
-void    send_game_info_to_client(struct socket_info *si, struct game_info *gi)
-{
-
 }
 
 

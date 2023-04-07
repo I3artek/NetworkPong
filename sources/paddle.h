@@ -5,8 +5,6 @@
 #ifndef MY_RAYLIB_GAME_PADDLE_H
 #define MY_RAYLIB_GAME_PADDLE_H
 
-#include "raylib.h"
-
 #define PADDLE_WIDTH 200
 #define PADDLE_HEIGHT 40
 

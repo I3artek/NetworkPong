@@ -4,6 +4,8 @@
 #include "nettools.h"
 
 #define WINDOW_TITLE "Window title"
+#define CONNECT_BTN_WIDTH 400
+#define CONNECT_BTN_HEIGHT 100
 
 struct  game_info
 {
@@ -29,6 +31,8 @@ int main(int argc, char **argv)
     gi.lower_paddle_x = (SCREEN_WIDTH - PADDLE_WIDTH) / 2;
     gi.ball_pos.x = SCREEN_WIDTH / 2 - BALL_RADIUS;
     gi.ball_pos.y = SCREEN_HEIGHT / 2 - BALL_RADIUS;
+
+    getchar();
 
     struct socket_info si = {};
     si.server_addr = make_address(argv[1], argv[2]);

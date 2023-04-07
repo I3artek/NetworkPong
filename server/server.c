@@ -22,7 +22,6 @@ void    get_game_info_from_client(struct socket_info *si, float *pos);
 
 int main()
 {
-    //fprintf(stderr, "%lld", getpid());
 
     struct game_info gi;
     gi.ball_x = SCREEN_WIDTH / 2 - BALL_RADIUS;
@@ -61,7 +60,7 @@ void    move_ball(struct game_info *gi, float *vx, float *vy)
 {
     gi->ball_x += *vx;
     gi->ball_y += *vy;
-
+    
     if(gi->ball_x > gi->upper_paddle_x &&
     gi->ball_x < gi->upper_paddle_x + PADDLE_WIDTH &&
     gi->ball_y < PADDLE_HEIGHT + BALL_RADIUS)

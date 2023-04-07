@@ -1,20 +1,20 @@
-# Simple and portable CMake template for raylib
+# Simple network pong game
 
-This is a basic project template for raylib using CMake and has been tested with Visual Studio, Visual Studio Code and CLion.
+Graphics are created using raylib.
 
-The master branch of the raylib source code is downloaded using CMake FetchContent from github and compiled from source as it is much easier than including prebuilt binaries for every platform and configuration.
+Networking is handled by TCP protocol implemented using posix sockets interface.
 
-Building from the cmake file will build both raylib and `src/main.c` which includes a basic example of a raylib program.
+There are some details that can be polished, but the main goal was proof of concept in the learning process.
 
-## Asset handling
+Compile and run:
+-
+- one server instance `>./NetworkPong_server`
+- two client instances `>./NetworkPong host port`
 
-The example in `src/main.c` uses an example image located in the `assets` folder.
-To load it we use `ASSETS_PATH`, which is a string macro with the *absolute* path "assets" directory.
-This macro is defined in the `CMakeLists.txt` file on line `23`.
- 
-If you plan on releasing or sharing your game consider manually setting the value of the `ASSETS_PATH` macro.
+Default addresses set in server code are: `127.0.0.1:12345` and `127.0.0.1:12346`.
 
-In C you can concatenate string literals by putting them next to each other, 
-eg: `"A" "B"` is `"AB"`. So ASSETS_PATH `"test.png"` becomes `"/path/to/your/assets/test.png"`
+Client instance will wait for any user input before trying to connect to the server and creating a window.
 
-If you wanna share your game with others you should set ASSETS_PATH to be a *relative* path like "./assets/". You can do this in the CMakeLists.txt file. 
+As I wanted to keep this project simple, this was the easiest way to handle connecting process.
+
+After running both the server and the clients, just press `Enter` in both client terminals, starting with the one connecting to port `12345`.

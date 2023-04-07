@@ -6,6 +6,8 @@
 #include "../sources/game.h"
 #include "../sources/nettools.h"
 
+#define VELOCITY 1
+
 struct  game_info
 {
     float    upper_paddle_x;
@@ -14,17 +16,17 @@ struct  game_info
     float    ball_y;
 };
 
-void    move_ball(struct game_info *gi, float vx, float vy);
-void    send_game_info_to_client(struct socket_info *si, struct game_info *gi, float pos);
+void    move_ball(struct game_info *gi, float *vx, float *vy);
+void    send_game_info_to_client(struct socket_info *si, float, float, float pos);
 void    get_game_info_from_client(struct socket_info *si, float *pos);
 
 int main()
 {
     //fprintf(stderr, "%lld", getpid());
 
-    struct game_info gameInfo;
-    gameInfo.ball_x = SCREEN_WIDTH / 2 - BALL_RADIUS;
-    gameInfo.ball_y = SCREEN_WIDTH / 2 - BALL_RADIUS;
+    struct game_info gi;
+    gi.ball_x = SCREEN_WIDTH / 2 - BALL_RADIUS;
+    gi.ball_y = SCREEN_WIDTH / 2 - BALL_RADIUS;
 
     struct socket_info player_one;
     struct socket_info player_two;
@@ -37,16 +39,16 @@ int main()
     create_server(&player_two);
     accept_client(&player_two);
 
-    float vx = 1;
-    float vy = 1;
+    float vx = VELOCITY;
+    float vy = VELOCITY;
 
     while (1)
     {
-        move_ball(&gameInfo, vx, vy);
-        send_game_info_to_client(&player_one, &gameInfo, gameInfo.upper_paddle_x);
-        send_game_info_to_client(&player_two, &gameInfo, gameInfo.lower_paddle_x);
-        get_game_info_from_client(&player_one, &gameInfo.lower_paddle_x);
-        get_game_info_from_client(&player_two, &gameInfo.upper_paddle_x);
+        move_ball(&gi, &vx, &vy);
+        send_game_info_to_client(&player_one, gi.ball_x, gi.ball_y, gi.upper_paddle_x);
+        send_game_info_to_client(&player_two, gi.ball_x, SCREEN_HEIGHT - gi.ball_y, gi.lower_paddle_x);
+        get_game_info_from_client(&player_one, &gi.lower_paddle_x);
+        get_game_info_from_client(&player_two, &gi.upper_paddle_x);
     }
 
     release(&player_one);
@@ -55,18 +57,48 @@ int main()
     return EXIT_SUCCESS;
 }
 
-void    move_ball(struct game_info *gi, float vx, float vy)
+void    move_ball(struct game_info *gi, float *vx, float *vy)
 {
-    gi->ball_x += vx;
-    gi->ball_y += vy;
+    gi->ball_x += *vx;
+    gi->ball_y += *vy;
+
+    if(gi->ball_x > gi->upper_paddle_x &&
+    gi->ball_x < gi->upper_paddle_x + PADDLE_WIDTH &&
+    gi->ball_y < PADDLE_HEIGHT + BALL_RADIUS)
+    {
+        //hits the upper paddle
+        *vy *= -1;
+    } else if(gi->ball_x > gi->lower_paddle_x &&
+              gi->ball_x < gi->lower_paddle_x + PADDLE_WIDTH &&
+              gi->ball_y > SCREEN_HEIGHT - PADDLE_HEIGHT - BALL_RADIUS)
+    {
+        //hits the lower paddle
+        *vy *= -1;
+    } else if(gi->ball_y < BALL_RADIUS)
+    {
+        //hits upper border
+        *vy *= -1;
+    } else if(gi->ball_y > (SCREEN_HEIGHT - BALL_RADIUS))
+    {
+        //hits lower border
+        *vy *= -1;
+    } else if(gi->ball_x < BALL_RADIUS)
+    {
+        //hits left border
+        *vx *= -1;
+    } else if(gi->ball_x > (SCREEN_WIDTH - BALL_RADIUS))
+    {
+        //hits right border
+        *vx *= -1;
+    }
 }
 
-void    send_game_info_to_client(struct socket_info *si, struct game_info *gi, float pos)
+void    send_game_info_to_client(struct socket_info *si, float ball_x, float ball_y, float paddle_pos)
 {
     float buf[3];
-    buf[0] = gi->ball_x;
-    buf[1] = gi->ball_y;
-    buf[2] = pos;
+    buf[0] = ball_x;
+    buf[1] = ball_y;
+    buf[2] = paddle_pos;
     if (send(si->client_socket, buf, sizeof(buf), 0) < 0) {
         perror("sendto()");
         exit(EXIT_FAILURE);

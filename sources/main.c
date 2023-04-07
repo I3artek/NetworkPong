@@ -88,5 +88,13 @@ void    send_game_info_to_server(struct socket_info *si, struct game_info *gi)
 
 void    update_paddle(struct game_info *gi)
 {
-    gi->lower_paddle_x = GetMouseX() - PADDLE_WIDTH / 2;
+    float new_pos = GetMouseX() - PADDLE_WIDTH / 2;
+    if(new_pos < 0)
+    {
+        new_pos = 0;
+    } else if(new_pos > (SCREEN_WIDTH - PADDLE_WIDTH))
+    {
+        new_pos = SCREEN_WIDTH - PADDLE_WIDTH;
+    }
+    gi->lower_paddle_x = new_pos;
 }

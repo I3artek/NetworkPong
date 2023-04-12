@@ -1,7 +1,6 @@
 #include "raylib.h"
 
 #include "game.h"
-#include "nettools.h"
 
 #define WINDOW_TITLE "Window title"
 #define CONNECT_BTN_WIDTH 400
@@ -14,12 +13,13 @@ struct  game_info
     Vector2 ball_pos;
 };
 
-void    draw_ball_and_paddles(struct game_info *gi);
-void    get_game_info_from_server(struct socket_info *si, struct game_info *gi);
-void    send_game_info_to_server(struct socket_info *si, struct game_info *gi);
-void    update_paddle(struct game_info *gi);
+void    draw_ball_and_paddles(struct game_info *);
+void    get_game_info_from_server(struct client_socket *, struct game_info *);
+void    send_game_info_to_server(struct client_socket *, struct game_info *);
+void    update_paddle(struct game_info *);
+void    create_client(struct client_socket *);
 
-int main(int argc, char **argv)
+int main()
 {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, WINDOW_TITLE);
     SetTargetFPS(60);
@@ -32,18 +32,26 @@ int main(int argc, char **argv)
     gi.ball_pos.x = SCREEN_WIDTH / 2 - BALL_RADIUS;
     gi.ball_pos.y = SCREEN_HEIGHT / 2 - BALL_RADIUS;
 
-    getchar();
+    while (!WindowShouldClose() && !IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+    {
+        BeginDrawing();
 
-    struct socket_info si = {};
-    si.server_addr = make_address(argv[1], argv[2]);
-    create_client(&si);
+        ClearBackground(BLACK);
+
+        draw_ball_and_paddles(&gi);
+
+        EndDrawing();
+    }
+
+    struct client_socket cs = {};
+    create_client(&cs);
 
     while (!WindowShouldClose())
     {
         //Update
         update_paddle(&gi);
-        send_game_info_to_server(&si, &gi);
-        get_game_info_from_server(&si, &gi);
+        send_game_info_to_server(&cs, &gi);
+        get_game_info_from_server(&cs, &gi);
 
         //Draw
         BeginDrawing();
@@ -55,7 +63,7 @@ int main(int argc, char **argv)
         EndDrawing();
     }
 
-    release(&si);
+    close(cs.sock);
 
     CloseWindow();
 
@@ -69,10 +77,10 @@ void    draw_ball_and_paddles(struct game_info *gi)
     DrawRectangle(gi->upper_paddle_x, 0, PADDLE_WIDTH, PADDLE_HEIGHT, WHITE);
 }
 
-void    get_game_info_from_server(struct socket_info *si, struct game_info *gi)
+void    get_game_info_from_server(struct client_socket *cs, struct game_info *gi)
 {
     float buf[3];
-    ssize_t ret = recv(si->client_socket, buf, sizeof(buf), 0);
+    ssize_t ret = recv(cs->sock, buf, sizeof(buf), 0);
     if (ret < 0) {
         perror("recv()");
         exit(EXIT_FAILURE);
@@ -82,9 +90,9 @@ void    get_game_info_from_server(struct socket_info *si, struct game_info *gi)
     gi->upper_paddle_x = buf[2];
 }
 
-void    send_game_info_to_server(struct socket_info *si, struct game_info *gi)
+void    send_game_info_to_server(struct client_socket *cs, struct game_info *gi)
 {
-    if (send(si->client_socket, &gi->lower_paddle_x, sizeof(float ), 0) < 0) {
+    if (send(cs->sock, &gi->lower_paddle_x, sizeof(float ), 0) < 0) {
         perror("sendto()");
         exit(EXIT_FAILURE);
     }
@@ -101,4 +109,23 @@ void    update_paddle(struct game_info *gi)
         new_pos = SCREEN_WIDTH - PADDLE_WIDTH;
     }
     gi->lower_paddle_x = new_pos;
+}
+
+void    create_client(struct client_socket *cs)
+{
+    struct sockaddr_in server_addr = make_address(SERVER_ADDRESS, SERVER_PORT);
+
+    cs->sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (cs->sock < 0) {
+        perror("socket()");
+        exit(EXIT_FAILURE);
+    }
+
+    if (connect(cs->sock,
+                (struct sockaddr *) &server_addr,
+                sizeof(server_addr)) < 0)
+    {
+        perror("connect()");
+        exit(EXIT_FAILURE);
+    }
 }

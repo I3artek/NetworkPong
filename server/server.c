@@ -3,8 +3,7 @@
 //
 
 #include <stdlib.h>
-#include "../sources/game.h"
-#include "../sources/nettools.h"
+#include "game.h"
 
 #define VELOCITY 1
 
@@ -16,9 +15,17 @@ struct  game_info
     float    ball_y;
 };
 
-void    move_ball(struct game_info *gi, float *vx, float *vy);
-void    send_game_info_to_client(struct socket_info *si, float, float, float pos);
-void    get_game_info_from_client(struct socket_info *si, float *pos);
+struct server_socket
+{
+    struct  sockaddr_in server_addr;
+    int     sock;
+};
+
+void    move_ball(struct game_info *, float *, float *);
+void    send_game_info_to_client(struct client_socket *, float, float, float);
+void    get_game_info_from_client(struct client_socket *, float *);
+void    create_server(struct server_socket *);
+void    accept_client(struct client_socket *, struct server_socket *);
 
 int main()
 {
@@ -27,16 +34,13 @@ int main()
     gi.ball_x = SCREEN_WIDTH / 2 - BALL_RADIUS;
     gi.ball_y = SCREEN_WIDTH / 2 - BALL_RADIUS;
 
-    struct socket_info player_one;
-    struct socket_info player_two;
+    struct server_socket serverSocket;
+    struct client_socket playerOne;
+    struct client_socket playerTwo;
 
-    player_one.server_addr = make_address("127.0.0.1", "12345");
-    create_server(&player_one);
-    accept_client(&player_one);
-
-    player_two.server_addr = make_address("127.0.0.1", "12346");
-    create_server(&player_two);
-    accept_client(&player_two);
+    create_server(&serverSocket);
+    accept_client(&playerOne, &serverSocket);
+    accept_client(&playerTwo, &serverSocket);
 
     float vx = VELOCITY;
     float vy = VELOCITY;
@@ -44,14 +48,15 @@ int main()
     while (1)
     {
         move_ball(&gi, &vx, &vy);
-        send_game_info_to_client(&player_one, gi.ball_x, gi.ball_y, gi.upper_paddle_x);
-        send_game_info_to_client(&player_two, gi.ball_x, SCREEN_HEIGHT - gi.ball_y, gi.lower_paddle_x);
-        get_game_info_from_client(&player_one, &gi.lower_paddle_x);
-        get_game_info_from_client(&player_two, &gi.upper_paddle_x);
+        send_game_info_to_client(&playerOne, gi.ball_x, gi.ball_y, gi.upper_paddle_x);
+        send_game_info_to_client(&playerTwo, gi.ball_x, SCREEN_HEIGHT - gi.ball_y, gi.lower_paddle_x);
+        get_game_info_from_client(&playerOne, &gi.lower_paddle_x);
+        get_game_info_from_client(&playerTwo, &gi.upper_paddle_x);
     }
 
-    release(&player_one);
-    release(&player_two);
+    close(serverSocket.sock);
+    close(playerOne.sock);
+    close(playerTwo.sock);
 
     return EXIT_SUCCESS;
 }
@@ -92,23 +97,60 @@ void    move_ball(struct game_info *gi, float *vx, float *vy)
     }
 }
 
-void    send_game_info_to_client(struct socket_info *si, float ball_x, float ball_y, float paddle_pos)
+void    send_game_info_to_client(struct client_socket *cs, float ball_x, float ball_y, float paddle_pos)
 {
     float buf[3];
     buf[0] = ball_x;
     buf[1] = ball_y;
     buf[2] = paddle_pos;
-    if (send(si->client_socket, buf, sizeof(buf), 0) < 0) {
+    if (send(cs->sock, buf, sizeof(buf), 0) < 0) {
         perror("sendto()");
         exit(EXIT_FAILURE);
     }
 }
 
-void    get_game_info_from_client(struct socket_info *si, float *pos)
+void    get_game_info_from_client(struct client_socket *cs, float *pos)
 {
-    ssize_t ret = recv(si->client_socket, pos, sizeof(float), 0);
+    ssize_t ret = recv(cs->sock, pos, sizeof(float), 0);
     if (ret < 0) {
         perror("recv()");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void    create_server(struct server_socket *ss)
+{
+    ss->server_addr = make_address(SERVER_ADDRESS, SERVER_PORT);
+
+    ss->sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (ss->sock < 0)
+    {
+        perror("socket()");
+        exit(EXIT_FAILURE);
+    }
+
+    if (bind(ss->sock,
+             (struct sockaddr *) &ss->server_addr,
+             sizeof(ss->server_addr)) < 0)
+    {
+        perror("bind()");
+        exit(EXIT_FAILURE);
+    }
+
+    if (listen(ss->sock, 2) < 0)
+    {
+        perror("listen()");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void    accept_client(struct client_socket *cs, struct server_socket *ss)
+{
+    cs->client_addrlen = sizeof(cs->client_addr);
+    cs->sock = accept(ss->sock, &cs->client_addr, &cs->client_addrlen);
+    if (cs->sock < 0)
+    {
+        perror("accept()");
         exit(EXIT_FAILURE);
     }
 }
